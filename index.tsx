@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BarChart, Users, TrendingUp, Activity, LayoutGrid, Briefcase, Building2, Network, GitGraph, Clock, PlayCircle, Circle } from 'lucide-react';
+import { BarChart, Users, TrendingUp, TrendingDown, Activity, LayoutGrid, Briefcase, Building2, Network, GitGraph, Clock, PlayCircle, Circle, Trophy, FileText, Calendar, Timer, Rocket, Sparkles, Database, PenTool, Code2, Zap, Target, Lightbulb, CheckCircle2, PieChart } from 'lucide-react';
 
 // --- Types ---
 
@@ -31,6 +31,7 @@ interface PostGroup {
   post: string;
   avgProjectCount: number;
   totalPeopleCount: number;
+  avgWeekendOvertime: number; // Added overtime metric
   topPeople: PersonMetrics[];
 }
 
@@ -56,6 +57,13 @@ interface ProjectMetrics {
 interface DeptGroup {
   deptName: string;
   projects: ProjectMetrics[];
+}
+
+// Metrics for Page 3 (Report)
+interface WorkHourEntry {
+  month: string;
+  deptName: string;
+  avgHours: number;
 }
 
 // --- Raw Data Processing ---
@@ -317,7 +325,7 @@ const RAW_DATA_STRING = `
 | 数据  | 吴群英 | 进行中  | 40.00 %  | 经营数智      | 企发办     | 2026年1月4日   | 2026年2月28日  |
 | 产品  | 黄翠玲 | 待开始  | 2.50 %   | 智控        | 财务底盘处   | 2026年2月2日   | 2026年3月31日  |
 | 数据  | 肖凯中 | 进行中  | 40.00 %  | 激活经营      | 财务底盘处   | 2026年1月4日   | 2026年2月28日  |
-| 产品  | 衣薇霖 | 进行中  | 20.00 %  | 激活经营      | 企发办     | 2026年1月1日   | 2026年2月15日  |
+| 产品  | 衣薇霖 | 进行中  | 20.00 %  | 激活经营      | 企发办     | 2026年1月1日   | 2026年1月25日  |
 | 产品  | 王婕  | 待开始  | 10.00 %  | 综合项目      | 综合服务处   | 2026年1月20日  | 2026年2月28日  |
 | 数据  | 胡孝思 | 进行中  | 50.00 %  | 数据中台      | 顺丰科技    | 2026年1月5日   | 2026年2月28日  |
 | 产品  | 魏文南 | 待开始  | 5.00 %   | 经营数智      | 企发办     | 2026年2月5日   | 2026年2月27日  |
@@ -367,7 +375,7 @@ const RAW_DATA_STRING = `
 | 产品  | 魏文南 | 待开始  | 10.00 %  | 岗位工作台-1号位 | 企发办     | 2026年2月23日  | 2026年2月28日  |
 | 产品  | 杨仙霞 | 待开始  | 10.00 %  | 智策        | CHO办公室  | 2026年1月30日  | 2026年2月12日  |
 | 产品  | 周柳  | 进行中  | 10.00 %  | 经营数智      | 企发办     | 2026年1月4日   | 2026年2月28日  |
-| 前后端 | 黄镇杰 | 待开始  | 100.00 % | 营运        | COO办公室  | 2026年2月7日   | 2026年2月28日  |
+| 前后端 | 黄镇杰 | 待开始  | 10.00 %  | 营运        | COO办公室  | 2026年2月7日   | 2026年2月28日  |
 | 产品  | 龚靖靖 | 待开始  | 50.00 %  | 国际数据建设    | 国际经营中心  | 2026年4月1日   | 2026年4月30日  |
 | 数据  | 罗克宸 | 进行中  | 20.00 %  | 智控        | 财务底盘处   | 2026年1月19日  | 2026年1月31日  |
 | 数据  | 张丹丹 | 进行中  | 10.00 %  | 经营数智      | 企发办     | 2026年1月20日  | 2026年1月30日  |
@@ -563,9 +571,9 @@ const RAW_DATA_STRING = `
 | 产品  | 魏文南 | 待开始  | 10.00 %  | 岗位工作台-1号位 | 企发办     | 2026年2月23日  | 2026年2月28日  |
 | 产品  | 王婕  | 进行中  | 10.00 %  | 综合项目      | 综合服务处   | 2025年12月25日 | 2026年1月31日  |
 | 前后端 | 张壮  | 待开始  | 100.00 % | 营运        | COO办公室  | 2026年2月10日  | 2026年2月28日  |
-| 产品  | 衣薇霖 | 进行中  | 30.00 %  | 激活经营      | 企发办     | 2026年1月1日   | 2026年2月15日  |
+| 产品  | 衣薇霖 | 进行中  | 30.00 %  | 激活经营      | 企发办     | 2026年1月1日   | 2026年1月25日  |
 | 前后端 | 曾博  | 待开始  | 100.00 % | 国际经管平台    | 国际经营中心  | 2026年2月5日   | 2026年2月28日  |
-| 数据  | 林鸿超 | 进行中  | 10.00 %  | 数据中台      | 顺丰科技    | 2026年1月14日  | 2026年2月14日  |
+| 数据  | 林鸿超 | 进行中  | 10.00 %  | 数据中台      | 顺丰科技    | 2026年1月14日  | 2026年1月24日  |
 | 数据  | 陈小梅 | 进行中  | 20.00 %  | 财务成本底盘    | 财务底盘处   | 2026年1月4日   | 2026年1月31日  |
 | 前后端 | 薛俊友 | 待开始  | 100.00 % | 经营数智      | 企发办     | 2026年2月1日   | 2026年2月28日  |
 | 数据  | 张丹丹 | 待开始  | 50.00 %  | 经营数智      | 企发办     | 2026年2月24日  | 2026年3月6日   |
@@ -583,6 +591,47 @@ const RAW_DATA_STRING = `
 | 数据  | 路高飞 | 待开始  | 50.00 %  | AI智能体     | 科技财务部   | 2026年2月1日   | 2026年2月28日  |
 | 产品  | 魏文南 | 进行中  | 10.00 %  | 经营数智      | 企发办     | 2026年1月14日  | 2026年1月31日  |
 | 数据  | 张晓婷 | 待开始  | 10.00 %  | 结算数字化     | 财务共享中心  | 2026年1月30日  | 2026年2月2日   |
+`;
+
+const WORK_HOURS_RAW = `
+| 202511 | 大数据中心/经营数据产品部        | 11.22394598 |
+| 202511 | 大数据中心/AI技术平台组        | 11.17984369 |
+| 202511 | 大数据中心/数据中台与创新产品部     | 11.01321258 |
+| 202511 | 大数据中心/质量与运营组         | 10.81917113 |
+| 202511 | 大数据中心/MO数据产品部        | 10.67988603 |
+| 202511 | 大数据中心/DataOps产品研发部   | 10.65386426 |
+| 202511 | 大数据中心/风控数据产品部        | 10.62780105 |
+| 202511 | 大数据中心/数据创新产研部        | 10.59685185 |
+| 202511 | 大数据中心/DataPaaS研发与运维部 | 10.54308312 |
+| 202511 | 大数据中心/国际数据产品组        | 10.46847222 |
+| 202511 | 大数据中心/营运数据产品部        | 10.22640476 |
+| 202512 | 大数据中心/经营数据产品部        | 11.0992872  |
+| 202512 | 大数据中心/AI技术平台组        | 11.08707859 |
+| 202512 | 大数据中心/数据中台与创新产品部     | 11.02789604 |
+| 202512 | 大数据中心/质量与运营组         | 10.97045025 |
+| 202512 | 大数据中心/国际数据产品组        | 10.85512077 |
+| 202512 | 大数据中心/MO数据产品部        | 10.80698021 |
+| 202512 | 大数据中心/数据创新产研部        | 10.69997926 |
+| 202512 | 大数据中心/DataPaaS研发与运维部 | 10.61701794 |
+| 202512 | 大数据中心/DataOps产品研发部   | 10.43509606 |
+| 202512 | 大数据中心/风控数据产品部        | 10.38133445 |
+| 202512 | 大数据中心/营运数据产品部        | 10.20779585 |
+| 202601 | 大数据中心/经营数据产品部        | 11.39320572 |
+| 202601 | 大数据中心/质量与运营组         | 11.10910123 |
+| 202601 | 大数据中心/数据中台与创新产品部     | 11.09927736 |
+| 202601 | 大数据中心/MO数据产品部        | 11.03273137 |
+| 202601 | 大数据中心/AI技术平台组        | 10.97957348 |
+| 202601 | 大数据中心/DataPaaS研发与运维部 | 10.67920541 |
+| 202601 | 大数据中心/DataOps产品研发部   | 10.59977089 |
+| 202601 | 大数据中心/风控数据产品部        | 10.40270224 |
+`;
+
+const OVERTIME_RAW = `
+| 岗位  | 月均周末加班天数    |
+|-----|-------------|
+| 产品  | 4.648409722 |
+| 前后端 | 15.969875   |
+| 数据  | 33.83046528 |
 `;
 
 // Helper to parse dates like "2026年1月20日" to "2026-01-20"
@@ -622,9 +671,607 @@ const parseData = (): Task[] => {
   });
 };
 
+const parseWorkHours = (): WorkHourEntry[] => {
+  const lines = WORK_HOURS_RAW.trim().split('\n').filter(line => 
+    line.includes('|') && 
+    !line.includes('月份') && // Exclude header
+    !line.includes('----')
+  );
+  return lines.map(line => {
+    const parts = line.split('|').map(p => p.trim());
+    return {
+      month: parts[1],
+      deptName: parts[2].replace('大数据中心/', ''), // Clean up dept name for display
+      avgHours: parseFloat(parts[3])
+    };
+  });
+};
+
+const parseOvertime = (): Record<string, number> => {
+   const lines = OVERTIME_RAW.trim().split('\n').filter(line => line.includes('|') && !line.includes('岗位') && !line.includes('---'));
+   const map: Record<string, number> = {};
+   lines.forEach(line => {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 2) {
+         map[parts[1]] = parseFloat(parts[2]);
+      }
+   });
+   return map;
+}
+
 const REAL_DATA = parseData();
+const WORK_HOURS_DATA = parseWorkHours();
+const OVERTIME_DATA = parseOvertime();
 
 // --- Components ---
+
+const ExecutiveSummarySection = ({ tasks, workHours }: { tasks: Task[], workHours: WorkHourEntry[] }) => {
+  
+  // Calculate dynamic stats
+  const stats = useMemo(() => {
+    // 1. Strategic Focus
+    const totalInv = tasks.reduce((sum, t) => sum + t.investmentPct, 0);
+    const keyDepts = ['企发办', 'CHO办公室', '财务底盘处'];
+    const keyInv = tasks
+      .filter(t => keyDepts.some(kd => t.requestingDept?.includes(kd)))
+      .reduce((sum, t) => sum + t.investmentPct, 0);
+    
+    const focusRate = totalInv > 0 ? (keyInv / totalInv) * 100 : 0;
+    
+    // 2. Max Work Hours (Finding the max from the raw data)
+    const maxHours = Math.max(...workHours.map(w => w.avgHours));
+    
+    return { focusRate, maxHours };
+  }, [tasks, workHours]);
+
+  return (
+    <div className="bg-gradient-to-br from-white to-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 shadow-lg relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-4 opacity-10">
+        <Briefcase className="w-48 h-48 text-slate-300" />
+      </div>
+      
+      <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 relative z-10">
+        <span className="p-2 bg-slate-800 text-white rounded-lg shadow-md">
+          <FileText className="w-5 h-5" />
+        </span>
+        部门效能与价值综述
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+        {/* Point 1: Hard Work */}
+        <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200 hover:shadow-md transition-all group">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-red-100 text-red-600 rounded-lg group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 mb-2">全员高负荷奋战</h3>
+              <p className="text-sm text-slate-600 leading-relaxed text-justify">
+                部门整体处于高饱和工作状态，各岗位工时持续高位运行，峰值日均工时达 <span className="font-bold text-red-600">{stats.maxHours.toFixed(2)}小时</span>。数据岗位周末加班强度指数高达 <span className="font-bold text-red-600">33.8</span>，全员展现出极强的战斗力全力保障交付。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Point 2: AI Efficiency */}
+        <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200 hover:shadow-md transition-all group">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-100 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+              <Lightbulb className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 mb-2">AI提效成果显著</h3>
+              <p className="text-sm text-slate-600 leading-relaxed text-justify">
+                AI工具已实现 <span className="font-bold text-blue-600">100%全员覆盖</span>。核心业务人均吞吐量激增 <span className="font-bold text-blue-600">192.73%</span>，原始需求交付周期缩短 <span className="font-bold text-blue-600">28.83%</span>，技术赋能业务成效斐然。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Point 3: Strategic Focus */}
+        <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200 hover:shadow-md transition-all group">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-green-100 text-green-600 rounded-lg group-hover:scale-110 transition-transform">
+              <Target className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 mb-2">聚焦高价值交付</h3>
+              <p className="text-sm text-slate-600 leading-relaxed text-justify">
+                研发资源精准投放，超过 <span className="font-bold text-green-600">{stats.focusRate.toFixed(1)}%</span> 的人力直接投入到<span className="font-bold text-slate-800">企发办、CHO办公室、财务底盘处</span>等核心领域，有力支撑了公司关键经营管理决策与底盘建设。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PostSummarySection = ({ groups }: { groups: PostGroup[] }) => {
+  const maxOvertime = useMemo(() => {
+    return [...groups].sort((a, b) => b.avgWeekendOvertime - a.avgWeekendOvertime)[0] || { post: '-', avgWeekendOvertime: 0 };
+  }, [groups]);
+
+  const maxLoad = useMemo(() => {
+    return [...groups].sort((a, b) => b.avgProjectCount - a.avgProjectCount)[0] || { post: '-', avgProjectCount: 0 };
+  }, [groups]);
+
+  const topPerson = useMemo(() => {
+    let max = 0;
+    let person = { name: '-', role: '-', count: 0 };
+    groups.forEach(g => {
+        g.topPeople.forEach(p => {
+            if (p.inProgressCount > max) {
+                max = p.inProgressCount;
+                person = { name: p.personName, role: g.post, count: p.inProgressCount };
+            }
+        })
+    })
+    return person;
+  }, [groups]);
+
+  return (
+    <div className="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-4 opacity-[0.05]">
+        <Briefcase className="w-64 h-64 text-slate-900" />
+      </div>
+      
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+            <span className="p-2 bg-slate-900 text-white rounded-lg shadow-md">
+                <Activity className="w-5 h-5" />
+            </span>
+            <h2 className="text-xl font-bold text-slate-800">
+                岗位效能透视：全员满负荷运行
+            </h2>
+        </div>
+        
+        <p className="text-slate-600 text-sm mb-8 max-w-4xl leading-relaxed">
+            数据洞察显示，各关键岗位均处于高强度运转状态。
+            <span className="font-bold text-slate-800 mx-1">{maxOvertime.post}岗位</span>
+            在承担极高周末加班压力的同时（月均<span className="font-bold text-red-600 mx-1">{maxOvertime.avgWeekendOvertime.toFixed(1)}天</span>），
+            依然保持着高效的交付节奏；
+            <span className="font-bold text-slate-800 mx-1">{maxLoad.post}岗位</span>
+            人均并行项目数达<span className="font-bold text-blue-600 mx-1">{maxLoad.avgProjectCount.toFixed(1)}个</span>，
+            展现了卓越的多线程处理能力。
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="bg-gradient-to-br from-red-50 to-white rounded-xl p-5 border border-red-100 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:scale-110 transition-transform">
+                    <Clock className="w-16 h-16 text-red-600" />
+                </div>
+                <div className="text-xs font-bold text-red-600 uppercase tracking-wider mb-2">最强抗压岗位</div>
+                <div className="text-2xl font-black text-slate-800 mb-1">{maxOvertime.post}</div>
+                <div className="text-sm text-slate-500">
+                    月均周末加班 <span className="text-2xl font-bold text-red-600 font-mono mx-1">{maxOvertime.avgWeekendOvertime.toFixed(1)}</span> 天
+                </div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-100 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:scale-110 transition-transform">
+                    <LayoutGrid className="w-16 h-16 text-blue-600" />
+                </div>
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">最高并发岗位</div>
+                <div className="text-2xl font-black text-slate-800 mb-1">{maxLoad.post}</div>
+                <div className="text-sm text-slate-500">
+                    人均并行项目 <span className="text-2xl font-bold text-blue-600 font-mono mx-1">{maxLoad.avgProjectCount.toFixed(1)}</span> 个
+                </div>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-gradient-to-br from-yellow-50 to-white rounded-xl p-5 border border-yellow-100 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:scale-110 transition-transform">
+                    <Trophy className="w-16 h-16 text-yellow-600" />
+                </div>
+                <div className="text-xs font-bold text-yellow-600 uppercase tracking-wider mb-2">单兵作战标杆</div>
+                <div className="text-2xl font-black text-slate-800 mb-1 truncate" title={topPerson.name}>{topPerson.name}</div>
+                <div className="text-sm text-slate-500">
+                    当前并行 <span className="text-2xl font-bold text-yellow-600 font-mono mx-1">{topPerson.count}</span> 个项目
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const OrgSummarySection = ({ tasks }: { tasks: Task[] }) => {
+  const summary = useMemo(() => {
+    const totalInvestment = tasks.reduce((sum, t) => sum + t.investmentPct, 0);
+    const deptMap = new Map<string, number>();
+    
+    tasks.forEach(t => {
+      const dept = t.requestingDept || '其他';
+      deptMap.set(dept, (deptMap.get(dept) || 0) + t.investmentPct);
+    });
+
+    const sortedDepts = Array.from(deptMap.entries())
+      .map(([name, val]) => ({ name, val, pct: totalInvestment > 0 ? (val / totalInvestment) * 100 : 0 }))
+      .sort((a, b) => b.val - a.val);
+
+    const top3 = sortedDepts.slice(0, 3);
+    const top3TotalPct = top3.reduce((sum, d) => sum + d.pct, 0);
+
+    return { top3, top3TotalPct, totalInvestment };
+  }, [tasks]);
+
+  return (
+    <div className="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden mb-8">
+      <div className="absolute top-0 right-0 p-4 opacity-[0.05]">
+        <Building2 className="w-64 h-64 text-green-900" />
+      </div>
+      
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+            <span className="p-2 bg-green-900 text-white rounded-lg shadow-md">
+                <Target className="w-5 h-5" />
+            </span>
+            <h2 className="text-xl font-bold text-slate-800">
+                资源投向分析：重点处室战略聚焦
+            </h2>
+        </div>
+        
+        <p className="text-slate-600 text-sm mb-8 max-w-4xl leading-relaxed">
+            统计显示，部门人力资源高度集中于核心业务领域。
+            投入占比排名前三的重点处室（<span className="font-bold text-slate-800">{summary.top3.map(d => d.name).join('、')}</span>）
+            合计占用了部门 <span className="font-bold text-green-600">{summary.top3TotalPct.toFixed(1)}%</span> 的人力资源，
+            充分体现了集中力量办大事的战略导向，确保持续为关键业务提供强有力的数智化支撑。
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Main Stat Card */}
+            <div className="md:col-span-1 bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-5 text-white shadow-lg flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-20">
+                    <PieChart className="w-32 h-32 text-white" />
+                </div>
+                <div className="text-sm font-medium text-green-100 mb-1">Top 3 处室合计投入占比</div>
+                <div className="text-4xl font-black tracking-tight">{summary.top3TotalPct.toFixed(1)}%</div>
+                <div className="mt-4 text-xs font-medium bg-white/20 inline-block px-2 py-1 rounded self-start backdrop-blur-sm">
+                    战略聚焦度：极高
+                </div>
+            </div>
+
+            {/* Individual Dept Cards */}
+            {summary.top3.map((dept, idx) => (
+                <div key={dept.name} className="md:col-span-1 bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-md hover:border-green-200 transition-all relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-2 opacity-[0.03] group-hover:scale-110 transition-transform">
+                        <Building2 className="w-24 h-24" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-slate-100 text-slate-600' : 'bg-orange-50 text-orange-600'}`}>
+                                {idx + 1}
+                            </span>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">重点投入方向</div>
+                        </div>
+                        <div className="text-lg font-bold text-slate-800 mb-1 truncate" title={dept.name}>{dept.name}</div>
+                    </div>
+                    <div className="mt-4">
+                        <div className="flex justify-between items-end mb-1">
+                            <span className="text-xs text-slate-500">投入占比</span>
+                            <span className="text-2xl font-bold text-green-600">{dept.pct.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-green-500 h-full rounded-full" style={{ width: `${(dept.pct / summary.top3[0].pct) * 100}%` }}></div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const DepartmentReportView = ({ data, tasks }: { data: WorkHourEntry[], tasks: Task[] }) => {
+  // Group by Month
+  const grouped = useMemo(() => {
+    const map = new Map<string, WorkHourEntry[]>();
+    // Collect all entries to find global max for consistent scale
+    let maxHours = 0;
+
+    data.forEach(entry => {
+      if (!map.has(entry.month)) {
+        map.set(entry.month, []);
+      }
+      map.get(entry.month)?.push(entry);
+      if (entry.avgHours > maxHours) maxHours = entry.avgHours;
+    });
+    
+    // Sort keys to ensure chronological order if needed
+    const sortedKeys = Array.from(map.keys()).sort();
+    
+    // Sort values within each month descending by hours
+    const result = sortedKeys.map(month => ({
+      month,
+      entries: map.get(month)?.sort((a, b) => b.avgHours - a.avgHours) || [],
+      // Calculate month average
+      monthAvg: (map.get(month) || []).reduce((sum, item) => sum + item.avgHours, 0) / (map.get(month)?.length || 1)
+    }));
+    
+    return { grouped: result, globalMax: maxHours };
+  }, [data]);
+
+  const formatMonth = (m: string) => {
+    // 202511 -> 2025年11月
+    return `${m.substring(0, 4)}年${m.substring(4)}月`;
+  };
+
+  return (
+    <div className="animate-in fade-in duration-500 max-w-[1800px] mx-auto space-y-8">
+       {/* New Executive Summary Section */}
+       <ExecutiveSummarySection tasks={tasks} workHours={data} />
+
+       {/* AI Efficiency Section */}
+       <div className="bg-white rounded-2xl p-6 md:p-10 border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-[0.03]">
+             <Sparkles className="w-64 h-64 text-blue-600" />
+          </div>
+          
+          <div className="flex items-center justify-between mb-8 relative z-10">
+             <div>
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                    <span className="p-2 bg-blue-100 text-blue-600 rounded-lg shadow-sm">
+                        <Rocket className="w-6 h-6" />
+                    </span>
+                    AI提效推广落地成果
+                </h2>
+                <p className="text-slate-500 mt-2 flex items-center gap-2">
+                    <span className="bg-slate-100 px-2 py-0.5 rounded text-xs font-semibold text-slate-600">对比区间</span>
+                    3-9月（前） vs 11-12月（后）
+                </p>
+             </div>
+             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 animate-pulse">
+                <Sparkles className="w-4 h-4" />
+                全面智能化转型中
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 relative z-10">
+              {/* Metric 1: Delivery Cycle (Reduction is good) */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                  <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2">
+                      <Timer className="w-4 h-4" />
+                      原始需求交付周期 (提效幅度)
+                  </h3>
+                  
+                  {/* Chart Area */}
+                  <div className="space-y-6 flex-1 flex flex-col justify-center">
+                      {/* Item 1: Business Dept */}
+                      <div>
+                          <div className="flex justify-between items-end mb-2">
+                              <span className="font-bold text-slate-800 flex items-center gap-2">
+                                  经营数据产品部
+                                  <span className="bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded border border-red-200">领先</span>
+                              </span>
+                              <span className="font-black text-2xl text-red-600">28.83%</span>
+                          </div>
+                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-red-500 rounded-full" style={{ width: '28.83%' }}></div>
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-slate-400">
+                              <span>34.3天 <span className="mx-1">→</span> 24.41天</span>
+                          </div>
+                      </div>
+
+                      {/* Item 2: Big Data Center */}
+                      <div>
+                          <div className="flex justify-between items-end mb-2">
+                              <span className="font-semibold text-slate-600">大数据中心</span>
+                              <span className="font-bold text-lg text-slate-500">24.05%</span>
+                          </div>
+                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-slate-400 rounded-full" style={{ width: '24.05%' }}></div>
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-slate-400">
+                              <span>28.02天 <span className="mx-1">→</span> 21.28天</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Metric 2: Throughput (Increase is good) */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-hidden">
+                   {/* Background decoration for the "winner" */}
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -mr-10 -mt-10 z-0"></div>
+
+                  <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 relative z-10">
+                      <Zap className="w-4 h-4" />
+                      原始需求人均吞吐量 (提效幅度)
+                  </h3>
+                  
+                  {/* Chart Area */}
+                  <div className="space-y-6 flex-1 flex flex-col justify-center relative z-10">
+                      {/* Item 1: Business Dept */}
+                      <div>
+                          <div className="flex justify-between items-end mb-2">
+                              <span className="font-bold text-slate-800 flex items-center gap-2">
+                                  经营数据产品部
+                                  <Trophy className="w-4 h-4 text-yellow-500 fill-current" />
+                              </span>
+                              <span className="font-black text-4xl text-yellow-600">192.73%</span>
+                          </div>
+                          <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                              <div className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-lg shadow-orange-200" style={{ width: '100%' }}></div> {/* Scaled to 100% relative visual */}
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-slate-400">
+                              <span>0.55个 <span className="mx-1">→</span> 1.61个</span>
+                              <span className="text-orange-600 font-bold">3.5倍增长!</span>
+                          </div>
+                      </div>
+
+                      {/* Item 2: Big Data Center */}
+                      <div>
+                          <div className="flex justify-between items-end mb-2">
+                              <span className="font-semibold text-slate-600">大数据中心</span>
+                              <span className="font-bold text-lg text-slate-500">56.00%</span>
+                          </div>
+                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                              {/* Scale relative to 192.73: 56/192.73 ~= 29% */}
+                              <div className="h-full bg-slate-400 rounded-full" style={{ width: '29%' }}></div>
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-slate-400">
+                              <span>1.75个 <span className="mx-1">→</span> 2.73个</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          {/* Role Tools */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+             {[
+                { 
+                   role: '数据', 
+                   tools: ['ChatData问答', 'ChatData Agent', 'ChatBI', '通义灵码'], 
+                   icon: <Database className="w-5 h-5 text-purple-600" />,
+                   color: 'purple',
+                   bg: 'bg-purple-50',
+                   border: 'border-purple-100'
+                },
+                { 
+                   role: '产品', 
+                   tools: ['AI Studio', 'Pixso AI', 'uxbox'], 
+                   icon: <PenTool className="w-5 h-5 text-pink-600" />,
+                   color: 'pink',
+                   bg: 'bg-pink-50',
+                   border: 'border-pink-100'
+                },
+                { 
+                   role: '前后端', 
+                   tools: ['Claude Code'], 
+                   icon: <Code2 className="w-5 h-5 text-cyan-600" />,
+                   color: 'cyan',
+                   bg: 'bg-cyan-50',
+                   border: 'border-cyan-100'
+                }
+             ].map((item) => (
+                <div key={item.role} className={`bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-colors group`}>
+                   <div>
+                      <div className="flex items-center justify-between mb-4">
+                         <div className="flex items-center gap-3 font-bold text-slate-700">
+                            <div className={`p-2.5 ${item.bg} rounded-lg group-hover:scale-110 transition-transform`}>
+                               {item.icon}
+                            </div>
+                            <span className="text-lg">{item.role}岗位提效</span>
+                         </div>
+                         <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-[10px] font-bold border border-green-100 shadow-sm">
+                            <Zap className="w-3 h-3 fill-current" />
+                            AI使用率 100%
+                         </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                         {item.tools.map(tool => (
+                            <span key={tool} className="text-xs font-medium text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 group-hover:bg-white group-hover:shadow-sm transition-all">
+                               {tool}
+                            </span>
+                         ))}
+                      </div>
+                   </div>
+                </div>
+             ))}
+          </div>
+       </div>
+
+       <div className="bg-white rounded-2xl p-6 md:p-10 border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                    <span className="p-2 bg-red-100 text-red-600 rounded-lg">
+                        <Activity className="w-6 h-6" />
+                    </span>
+                    部门工作日平均工时统计
+                </h2>
+                <p className="text-slate-500 mt-2">
+                    数据来源：大数据中心考勤系统 | 统计维度：二级部门
+                </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-8 h-[500px] items-end pb-8">
+            {grouped.grouped.map((group) => {
+               // Add a bit of headroom to the scale
+               const scaleMax = grouped.globalMax * 1.05; 
+               
+               return (
+                  <div key={group.month} className="flex-1 h-full flex flex-col justify-end group/month">
+                     {/* Chart Area */}
+                     <div className="relative flex-1 border-b border-slate-200 flex items-end justify-center px-4 gap-1.5 md:gap-3 bg-slate-50/30 rounded-t-lg">
+                        
+                        {/* Average Line */}
+                        <div 
+                           className="absolute w-full left-0 border-t-2 border-dashed border-slate-600 z-20 flex items-end justify-end pointer-events-none"
+                           style={{ bottom: `${(group.monthAvg / scaleMax) * 100}%` }}
+                        >
+                           <div className="text-[10px] font-bold text-slate-600 bg-white/80 px-1.5 py-0.5 rounded shadow-sm border border-slate-200 -mb-6 mr-2">
+                              中心平均: {group.monthAvg.toFixed(2)}h
+                           </div>
+                        </div>
+
+                        {/* Bars */}
+                        {group.entries.map((entry) => {
+                           const isTarget = entry.deptName.includes("经营数据产品部");
+                           const heightPct = (entry.avgHours / scaleMax) * 100;
+                           
+                           return (
+                              <div 
+                                key={entry.deptName}
+                                className={`w-full relative flex flex-col justify-end transition-all duration-500 ${isTarget ? 'z-10' : 'z-0 hover:z-10'}`}
+                                style={{ height: `${heightPct}%` }}
+                              >
+                                 {/* Bar */}
+                                 <div className={`w-full h-full rounded-t ${
+                                    isTarget 
+                                       ? 'bg-gradient-to-t from-red-600 to-red-500 shadow-md shadow-red-200' 
+                                       : 'bg-slate-300/80 hover:bg-slate-400'
+                                 }`}></div>
+
+                                 {/* Label - Only for target */}
+                                 {isTarget && (
+                                    <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex flex-col items-center min-w-[120px] pointer-events-none">
+                                        <span className="text-[10px] text-red-600/80 font-bold mb-0.5">TOP 1</span>
+                                        <div className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg flex flex-col items-center">
+                                           <span className="whitespace-nowrap">{entry.deptName}</span>
+                                           <span className="font-mono">{entry.avgHours.toFixed(2)}h</span>
+                                        </div>
+                                        <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-red-600 mt-[-1px]"></div>
+                                    </div>
+                                 )}
+                              </div>
+                           );
+                        })}
+                     </div>
+                     
+                     {/* X-Axis Label */}
+                     <div className="h-12 flex flex-col items-center justify-center border-t border-slate-200 bg-white">
+                        <span className="text-sm font-bold text-slate-700">{formatMonth(group.month)}</span>
+                     </div>
+                  </div>
+               )
+            })}
+          </div>
+          
+          <div className="flex justify-center mt-6 gap-6 text-xs text-slate-500">
+             <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                <span>经营数据产品部</span>
+             </div>
+             <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-slate-300 rounded-sm"></div>
+                <span>其他部门</span>
+             </div>
+             <div className="flex items-center gap-2">
+                <div className="w-6 h-0 border-t-2 border-dashed border-slate-600"></div>
+                <span>大数据中心平均工时</span>
+             </div>
+          </div>
+       </div>
+    </div>
+  )
+}
 
 const PostView = ({ tasks }: { tasks: Task[] }) => {
   const postMetrics = useMemo(() => {
@@ -681,6 +1328,7 @@ const PostView = ({ tasks }: { tasks: Task[] }) => {
       const totalProjects = people.reduce((sum, p) => sum + p.projectCount, 0);
       const avgProjectCount = people.length ? (totalProjects / people.length) : 0;
       const totalPeopleCount = people.length;
+      const avgWeekendOvertime = OVERTIME_DATA[post] || 0;
 
       const sortedPeople = [...people].sort((a, b) => {
         if (b.inProgressCount !== a.inProgressCount) {
@@ -693,6 +1341,7 @@ const PostView = ({ tasks }: { tasks: Task[] }) => {
         post,
         avgProjectCount,
         totalPeopleCount,
+        avgWeekendOvertime,
         topPeople: sortedPeople.slice(0, 5)
       });
     });
@@ -701,75 +1350,93 @@ const PostView = ({ tasks }: { tasks: Task[] }) => {
   }, [tasks]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 animate-in fade-in duration-500">
-      {postMetrics.map((group) => (
-        <div key={group.post} className="group relative bg-white rounded-2xl border border-slate-200 hover:border-red-200 transition-all duration-300 overflow-hidden shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-red-900/5">
-          <div className="relative p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <span className="w-1 h-6 bg-red-600 rounded-full shadow-sm"></span>
-              {group.post}
-            </h2>
-            <span className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-slate-200 text-xs font-bold text-slate-500 shadow-sm">
-              <Users className="w-3 h-3 text-slate-400" />
-              {group.totalPeopleCount} 人
-            </span>
-          </div>
-          <div className="p-6">
-            <div className="mb-8">
-              <div className="flex items-center gap-2 text-sm text-slate-500 uppercase tracking-wider font-semibold mb-2">
-                <Activity className="w-4 h-4 text-red-500" />
-                人均项目负载
-              </div>
-              <div className="flex items-end gap-3">
-                <span className="text-5xl font-black text-slate-900 leading-none tracking-tight">
-                  {group.avgProjectCount.toFixed(1)}
-                </span>
-                <span className="text-sm font-medium text-slate-400 mb-1">个 / 人</span>
-              </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <PostSummarySection groups={postMetrics} />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        {postMetrics.map((group) => (
+          <div key={group.post} className="group relative bg-white rounded-2xl border border-slate-200 hover:border-red-200 transition-all duration-300 overflow-hidden shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-red-900/5">
+            <div className="relative p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <span className="w-1 h-6 bg-red-600 rounded-full shadow-sm"></span>
+                {group.post}
+              </h2>
+              <span className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-slate-200 text-xs font-bold text-slate-500 shadow-sm">
+                <Users className="w-3 h-3 text-slate-400" />
+                {group.totalPeopleCount} 人
+              </span>
             </div>
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <TrendingUp className="w-3 h-3" />
-                Top 5 高负载人员
-              </h3>
-              <div className="space-y-3">
-                {group.topPeople.map((person, idx) => (
-                  <div key={person.personName} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 group-hover:bg-white group-hover:shadow-md group-hover:border-red-50 transition-all duration-300">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold shadow-sm ${
-                        idx === 0 
-                          ? 'bg-red-600 text-white' 
-                          : idx === 1
-                          ? 'bg-slate-700 text-white'
-                          : 'bg-slate-200 text-slate-600'
-                      }`}>
-                        {idx + 1}
-                      </div>
-                      <span className="font-semibold text-slate-700">{person.personName}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-6">
-                      <div className="flex flex-col items-end min-w-[3rem]">
-                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">进行中</span>
-                         <span className={`text-lg font-bold leading-none mt-0.5 ${person.inProgressCount > 3 ? 'text-red-600' : 'text-slate-800'}`}>
-                           {person.inProgressCount}
-                         </span>
-                      </div>
-                      <div className="flex flex-col items-end min-w-[3rem]">
-                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">积压</span>
-                         <span className={`text-lg font-bold leading-none mt-0.5 ${person.backlogCount > 0 ? 'text-slate-600' : 'text-slate-300'}`}>
-                           {person.backlogCount}
-                         </span>
-                      </div>
-                    </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
+                    <Activity className="w-3.5 h-3.5 text-red-500" />
+                    人均项目负载
                   </div>
-                ))}
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-black text-slate-900 leading-none tracking-tight">
+                      {group.avgProjectCount.toFixed(1)}
+                    </span>
+                    <span className="text-xs font-medium text-slate-400 mb-1.5">个</span>
+                  </div>
+                </div>
+                <div className="pl-4 border-l border-slate-100">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
+                    <Clock className="w-3.5 h-3.5 text-orange-500" />
+                    月均周末加班
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-black text-slate-900 leading-none tracking-tight">
+                      {group.avgWeekendOvertime.toFixed(1)}
+                    </span>
+                    <span className="text-xs font-medium text-slate-400 mb-1.5">天</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-3 h-3" />
+                  Top 5 高负载人员
+                </h3>
+                <div className="space-y-3">
+                  {group.topPeople.map((person, idx) => (
+                    <div key={person.personName} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 group-hover:bg-white group-hover:shadow-md group-hover:border-red-50 transition-all duration-300">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold shadow-sm ${
+                          idx === 0 
+                            ? 'bg-red-600 text-white' 
+                            : idx === 1
+                            ? 'bg-slate-700 text-white'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {idx + 1}
+                        </div>
+                        <span className="font-semibold text-slate-700">{person.personName}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-6">
+                        <div className="flex flex-col items-end min-w-[3rem]">
+                           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">进行中</span>
+                           <span className={`text-lg font-bold leading-none mt-0.5 ${person.inProgressCount > 3 ? 'text-red-600' : 'text-slate-800'}`}>
+                             {person.inProgressCount}
+                           </span>
+                        </div>
+                        <div className="flex flex-col items-end min-w-[3rem]">
+                           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">积压</span>
+                           <span className={`text-lg font-bold leading-none mt-0.5 ${person.backlogCount > 0 ? 'text-slate-600' : 'text-slate-300'}`}>
+                             {person.backlogCount}
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600/0 via-red-600 to-red-600/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600/0 via-red-600 to-red-600/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };
@@ -849,6 +1516,7 @@ const OrgProjectView = ({ tasks }: { tasks: Task[] }) => {
 
   return (
     <div className="space-y-4 p-2 animate-in fade-in duration-500 max-w-[1800px] mx-auto">
+      <OrgSummarySection tasks={tasks} />
       {deptMetrics.map((dept) => (
         <div key={dept.deptName} className="flex gap-2 items-center">
           
@@ -875,28 +1543,30 @@ const OrgProjectView = ({ tasks }: { tasks: Task[] }) => {
                             <h3 className="font-bold text-slate-800 text-xs truncate leading-tight" title={proj.projectName}>
                                 {proj.projectName}
                             </h3>
-                            <span className="text-[10px] font-black text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
-                                {proj.totalInvestment.toFixed(2)}
-                            </span>
+                            <div className="flex items-center gap-0.5 text-[10px] font-black bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                                <span className="text-green-600">{proj.statusSummary.inProgress.toFixed(2)}</span>
+                                <span className="text-slate-400">+</span>
+                                <span className="text-red-600">{proj.statusSummary.pending.toFixed(2)}</span>
+                            </div>
                         </div>
 
                         {/* Post Breakdown - Vertical Layout */}
                         <div className="flex flex-col gap-2">
                             {proj.postMetrics.map(pm => {
-                                const maxPostInv = Math.max(...proj.postMetrics.map(p => p.totalInvestment));
+                                // const maxPostInv = Math.max(...proj.postMetrics.map(p => p.totalInvestment));
                                 return (
                                     <div key={pm.post} className="flex flex-col w-full">
                                         <div className="flex justify-between items-end text-[10px] leading-none mb-1">
                                             <span className="text-slate-600 font-medium truncate max-w-[80px]" title={pm.post}>{pm.post}</span>
                                             <div className="flex items-center gap-0.5 font-bold">
-                                                <span className="text-red-600">{pm.inProgressInvestment.toFixed(2)}</span>
+                                                <span className="text-green-600">{pm.inProgressInvestment.toFixed(2)}</span>
                                                 <span className="text-slate-400 text-[8px]">+</span>
-                                                <span className="text-slate-500">{pm.pendingInvestment.toFixed(2)}</span>
+                                                <span className="text-red-600">{pm.pendingInvestment.toFixed(2)}</span>
                                             </div>
                                         </div>
                                         <div className="h-1.5 bg-slate-50 rounded-full overflow-hidden flex w-full border border-slate-100">
-                                            <div style={{ width: `${(pm.inProgressInvestment / (pm.totalInvestment || 1)) * 100}%` }} className="bg-red-500 h-full"></div>
-                                            <div style={{ width: `${(pm.pendingInvestment / (pm.totalInvestment || 1)) * 100}%` }} className="bg-slate-300 h-full"></div>
+                                            <div style={{ width: `${(pm.inProgressInvestment / (pm.totalInvestment || 1)) * 100}%` }} className="bg-green-500 h-full"></div>
+                                            <div style={{ width: `${(pm.pendingInvestment / (pm.totalInvestment || 1)) * 100}%` }} className="bg-red-500 h-full"></div>
                                         </div>
                                     </div>
                                 )
@@ -912,68 +1582,56 @@ const OrgProjectView = ({ tasks }: { tasks: Task[] }) => {
   );
 };
 
-const Dashboard = () => {
-  const [tasks] = useState<Task[]>(REAL_DATA);
-  const [viewMode, setViewMode] = useState<'post' | 'org'>('post');
+const App = () => {
+  const [activeTab, setActiveTab] = useState<'post' | 'project' | 'report'>('report');
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-900 selection:bg-red-100 selection:text-red-900">
-      <div className="max-w-[1800px] mx-auto">
-        <header className="mb-8 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900 selection:bg-red-100 selection:text-red-900">
+      <div className="max-w-[1800px] mx-auto mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200">
+            <LayoutGrid className="w-6 h-6" />
+          </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-              <span className="bg-gradient-to-br from-red-600 to-red-700 p-1.5 rounded-lg shadow-lg shadow-red-500/30">
-                <BarChart className="w-6 h-6 text-white" />
-              </span>
-              部门人力效能看板
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              经营数据产品部
+              <span className="text-slate-400 font-light mx-2">|</span>
+              <span className="text-red-600">效能看板</span>
             </h1>
-            <p className="text-slate-500 mt-1 text-sm font-light">
-              DEPARTMENT EFFICIENCY DASHBOARD
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              Data Center Efficiency Dashboard
             </p>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex items-center">
-              <button
-                onClick={() => setViewMode('post')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  viewMode === 'post' 
-                    ? 'bg-slate-900 text-white shadow-md' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                从岗位看
-              </button>
-              <button
-                onClick={() => setViewMode('org')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  viewMode === 'org' 
-                    ? 'bg-slate-900 text-white shadow-md' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <GitGraph className="w-3.5 h-3.5" />
-                从需求组织及项目视角
-              </button>
-            </div>
-            
-            <div className="hidden xl:flex items-center gap-2 text-xs text-slate-500 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-               实时数据
-            </div>
-          </div>
-        </header>
+        </div>
 
-        {viewMode === 'post' ? (
-          <PostView tasks={tasks} />
-        ) : (
-          <OrgProjectView tasks={tasks} />
-        )}
+        <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+          {[
+            { id: 'report', label: '部门报告', icon: FileText }
+            { id: 'post', label: '岗位效能', icon: Users },
+            { id: 'project', label: '项目透视', icon: Target },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 ${
+                activeTab === tab.id
+                  ? 'bg-slate-900 text-white shadow-md shadow-slate-200 transform scale-105'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-red-400' : ''}`} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {activeTab === 'post' && <PostView tasks={REAL_DATA} />}
+      {activeTab === 'project' && <OrgProjectView tasks={REAL_DATA} />}
+      {activeTab === 'report' && <DepartmentReportView data={WORK_HOURS_DATA} tasks={REAL_DATA} />}
     </div>
   );
 };
 
 const root = createRoot(document.getElementById('root')!);
-root.render(<Dashboard />);
+root.render(<App />);
