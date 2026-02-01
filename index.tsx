@@ -1606,9 +1606,9 @@ const App = () => {
 
         <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
           {[
-            { id: 'report', label: '部门报告', icon: FileText }
+            { id: 'report', label: '部门报告', icon: FileText },
             { id: 'post', label: '岗位效能', icon: Users },
-            { id: 'project', label: '项目透视', icon: Target },
+            { id: 'project', label: '项目透视', icon: Target }
           ].map(tab => (
             <button
               key={tab.id}
