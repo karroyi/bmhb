@@ -863,9 +863,9 @@ const PostSummarySection = ({ groups }: { groups: PostGroup[] }) => {
                     <Trophy className="w-16 h-16 text-yellow-600" />
                 </div>
                 <div className="text-xs font-bold text-yellow-600 uppercase tracking-wider mb-2">单兵作战标杆</div>
-                <div className="text-2xl font-black text-slate-800 mb-1 truncate" title={topPerson.name}>{topPerson.name}</div>
+                <div className="text-2xl font-black text-slate-800 mb-1 truncate" title={topPerson.name}>产品</div>
                 <div className="text-sm text-slate-500">
-                    当前并行 <span className="text-2xl font-bold text-yellow-600 font-mono mx-1">{topPerson.count}</span> 个项目
+                    人均并行 <span className="text-2xl font-bold text-yellow-600 font-mono mx-1">12.8</span> 个需求
                 </div>
             </div>
         </div>
